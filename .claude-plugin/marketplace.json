@@ -1,0 +1,11 @@
+{
+  "name": "pl-test-kit",
+  "owner": { "name": "Eli Payano" },
+  "plugins": [
+    {
+      "name": "pl-test-kit",
+      "source": "./",
+      "description": "Unit + Cucumber E2E test generation for Pagelove apps."
+    }
+  ]
+}
