@@ -2,6 +2,12 @@
   "name": "pl-test-kit",
   "version": "0.1.0",
   "description": "Generate and run unit tests (offline trigger harness) and Cucumber E2E tests for Pagelove apps.",
-  "author": { "name": "Eli Payano" },
+  "author": {
+    "name": "Eli Payano",
+    "url": "https://github.com/eli7pm"
+  },
+  "homepage": "https://github.com/eli7pm/pl-test-kit",
+  "repository": "https://github.com/eli7pm/pl-test-kit",
+  "license": "MIT",
   "keywords": ["pagelove", "testing", "cucumber", "e2e"]
 }

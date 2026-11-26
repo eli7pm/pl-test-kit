@@ -31,6 +31,60 @@ Feature: Access rules on the live host
       | /system/triggers.html |
       | /anything-else.html   |
 
+  # Proves the host honours selector ranges, so the 401s below aren't vacuous.
+  Scenario: public pages answer selector reads with a partial response
+    Given I am anonymous
+    When I GET "/index.html" selecting "title"
+    Then the status is 206
+
+  Scenario Outline: selector reads of internal documents stay private
+    Given I am anonymous
+    When I GET "<path>" selecting "<selector>"
+    Then the status is 401
+    And the response does not mention "<leak>"
+    Examples:
+      | path                  | selector                    | leak         |
+      | /data/links.html      | [itemtype]                  | itemprop     |
+      | /data/links.html      | [itemprop='url']            | itemprop     |
+      | /system/authz.html    | [itemtype]                  | itemtype     |
+      | /system/triggers.html | script                      | Pagelove.    |
+
+  # Error responses are never cut, so a byte range must not open a private page.
+  Scenario Outline: byte-range reads of internal documents stay private
+    Given I am anonymous
+    When I GET "<path>" with range "bytes=0-199"
+    Then the status is 401
+    Examples:
+      | path                  |
+      | /data/links.html      |
+      | /system/authz.html    |
+
+  # A 206 may skip Processors aimed at 200, so check their headers survive.
+  Scenario: identity-dependent answers stay uncacheable under a byte range
+    Given I am anonymous
+    When I GET "/api/me" with range "bytes=0-9"
+    Then the status is one of "200, 206"
+    And the header "Cache-Control" contains "no-store"
+
+  # The selector targets an element that doesn't exist, so a wrongly allowed
+  # request changes nothing and shows up as a 404/2xx instead of 401/403.
+  Scenario Outline: anonymous selector writes to data documents are refused
+    Given I am anonymous
+    When I <method> to "/data/links.html" selecting "#{{run}}" with HTML:
+      """
+      <li id="{{run}}">probe</li>
+      """
+    Then the status is one of "401, 403"
+    Examples:
+      | method |
+      | PUT    |
+      | POST   |
+
+  Scenario: anonymous selector deletes on data documents are refused
+    Given I am anonymous
+    When I DELETE "/data/links.html" selecting "#{{run}}"
+    Then the status is one of "401, 403"
+
   Scenario Outline: the links API needs a session
     Given I am anonymous
     When I <method> "/api/links"

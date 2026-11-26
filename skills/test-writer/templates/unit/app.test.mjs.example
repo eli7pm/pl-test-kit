@@ -7,7 +7,7 @@ import { parseHTML } from "linkedom";
 import { loadSite } from "../support/harness.mjs";
 
 const ROOT = process.env.PAGELOVE_ROOT ?? fileURLToPath(new URL("../../pagelove/", import.meta.url));
-const HOST = "grin-veil-8450.onpagelove.com";
+const HOST = "your-site.onpagelove.com";
 const TYPE = `https://${HOST}/schema/ShortLink`;
 const alice = { sub: "google-sub-alice", name: "Alice", email: "alice@example.test" };
 const bob = { sub: "google-sub-bob", name: "Bob" };

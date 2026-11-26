@@ -2,11 +2,14 @@
   "name": "__APP__-tests",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
-    "test": "npm run test:unit && npm run test:e2e",
+    "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "node --test \"unit/**/*.test.mjs\"",
     "test:e2e": "cucumber-js",
-    "login": "playwright open --save-storage"
+    "session": "node login.mjs"
   },
   "devDependencies": {
     "@cucumber/cucumber": "^13.3.0",

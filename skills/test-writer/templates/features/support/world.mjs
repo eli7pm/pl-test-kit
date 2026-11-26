@@ -37,11 +37,12 @@ class PageloveWorld extends World {
     this.responses = [];
     this.saved = {};
     this.cleanups = [];
+    this.bustCache = true; // GETs add ?cb=… so the edge cache can't answer
   }
 
   signIn(name) {
     const file = sessionFile(name);
-    if (!existsSync(file)) throw new Error(`No saved session ${file}. Capture one: npm run login -- ${file} ${BASE_URL}/auth/login`);
+    if (!existsSync(file)) throw new Error(`No saved session ${file}. Capture one: pnpm session ${name}`);
     this.as = name;
     this.cookie = cookieHeader(file);
   }
@@ -63,15 +64,20 @@ class PageloveWorld extends World {
     });
   }
 
-  async http(method, path, { json, headers = {} } = {}) {
+  // selector -> `Range: selector=<css>`, Pagelove's partial read/write of a document.
+  async http(method, path, { json, html, selector, headers = {} } = {}) {
     const url = new URL(BASE_URL + this.interpolate(path));
-    if (method === "GET" || method === "HEAD") url.searchParams.set("cb", Date.now().toString(36) + this.run);
+    if (this.bustCache && (method === "GET" || method === "HEAD")) url.searchParams.set("cb", Date.now().toString(36) + this.run);
     const h = { Accept: "application/json, text/html;q=0.9", ...headers };
     if (this.cookie) h.Cookie = this.cookie;
+    if (selector !== undefined) h.Range = `selector=${this.interpolate(selector)}`;
     let body;
     if (json !== undefined) {
       h["Content-Type"] = "application/json";
       body = typeof json === "string" ? this.interpolate(json) : JSON.stringify(json);
+    } else if (html !== undefined) {
+      h["Content-Type"] = "text/html";
+      body = this.interpolate(html);
     }
     const res = await fetch(url, { method, headers: h, body, redirect: "manual", cache: "no-store" });
     const text = await res.text();
