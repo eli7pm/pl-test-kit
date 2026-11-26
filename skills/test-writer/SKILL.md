@@ -32,10 +32,11 @@ Copy from this skill's directory:
 | `scripts/harness.mjs` | `tests/support/harness.mjs` |
 | `templates/package.json` | `tests/package.json` (replace `__APP__`) |
 | `templates/cucumber.mjs` | `tests/cucumber.mjs` (replace `__BASE_URL__`) |
+| `templates/login.mjs` | `tests/login.mjs` |
 | `templates/gitignore` | `tests/.gitignore` (**must** ignore `.auth/`) |
 | `templates/features/support/*.mjs` | `tests/features/support/` |
 
-Then run `npm install --save-dev linkedom @cucumber/cucumber` in `tests/`. Use the
+Then run `pnpm add -D linkedom @cucumber/cucumber` in `tests/`. Use the
 `*.example` files as worked examples of the style; don't copy them verbatim.
 
 ## 3. Write unit tests from the trigger code
@@ -71,7 +72,7 @@ site.post(html, path, selector, placement); site.put(...); site.del(path, select
 Use `process.env.PAGELOVE_ROOT ?? <default>` for `ROOT`, so the mutation check
 below can point the tests at a modified copy.
 
-Run `npm run test:unit`. If a test fails, decide whether **the test or the app**
+Run `pnpm test:unit`. If a test fails, decide whether **the test or the app**
 is wrong before changing either. A real app bug is a finding to report to the
 user. Don't weaken the assertion to make it pass.
 
@@ -94,6 +95,33 @@ least one test. If one survives, add the missing test. Delete the copy afterward
   anonymously. Every private path (data and system documents, plus a made-up
   path when the GET mode is `deny`) gets 401. Every gated API method gets 401.
   Anonymous only, so it's safe to run anytime.
+- **Selector ranges, also in `access.feature`:** Pagelove reads and writes parts
+  of a document with `Range: selector=<css>`, and authz rules can be scoped to a
+  selector. Whole-document checks don't prove those rules, so also generate:
+  - one public page read with a selector → 206, proving the host honours
+    ranges (otherwise the 401s below prove nothing);
+  - every private path read with a selector (at least `[itemtype]` and one
+    real `itemprop`) → 401, and the body doesn't contain the data;
+  - anonymous `PUT`/`POST`/`DELETE` with a selector on every data document →
+    401 or 403. Target a missing element (`#{{run}}`) so a wrongly allowed
+    write changes nothing and fails as 404 or 2xx. If the host answers 404
+    before checking authz, use a real element, against staging only;
+  - for each selector-scoped rule in `authz.html`, a signed-in scenario
+    (`@session:<name>`) with a selector the rule **doesn't** cover → refused.
+
+  A selector read returns only the **first** match, so never use one to count
+  or list elements. Write selectors with single quotes (`[itemprop='url']`).
+- **Byte ranges (`with range "bytes=0-199"`):** every private path → 401 (errors
+  are never cut). Pagelove cuts ranges after Processors run, but a 206 runs only
+  Processors aimed at 206, so for every Processor-added header or redaction,
+  repeat its check with a byte range. Expect `200` or `206`: hosts with
+  decorations, and malformed ranges, get the whole 200.
+- **Edge-cache leaks, in `isolation.feature`:** the edge proxy caches 206
+  answers to selector reads. Steps normally add `?cb=…` to every GET, which
+  bypasses the cache and hides such leaks. Start these scenarios with `Given
+  requests may hit the edge cache`, read an identity-dependent page as alice
+  (whole page and with a selector), then make the same requests as bob and
+  anonymously, and assert alice's data isn't in them.
 - **`<resource>.feature`, tagged `@session:<name>`:** the signed-in lifecycle
   (create → list → public read → delete → gone), duplicate key → 409, a
   concurrent duplicate (`N times at once`) → exactly one 201, and hostile
@@ -101,7 +129,8 @@ least one test. If one survives, add the missing test. Delete the copy afterward
 - **`isolation.feature`, tagged `@session:alice @session:bob`:** B can't see or
   delete A's records, and public endpoints behave the same for both.
 
-Use only the generic steps in `features/support/steps.mjs`. Add a new step only
+Use only the generic steps in `features/support/steps.mjs` (including
+`I GET "<path>" selecting "<css>"` and `I PUT to "<path>" selecting "<css>" with HTML:`). Add a new step only
 when the existing ones can't express the check, and keep it generic. Placeholders:
 `{{run}}` (unique `zztest-xxxxxx` per scenario), `{{saved.name}}` (from `I remember
 "json.path" as "name"`) and `{{last.json.path}}`.
@@ -113,10 +142,16 @@ and never collides with real data.
 
 ## 5. Run
 
-- `npm run test:unit`: offline, always safe.
-- `npx cucumber-js --tags "not @session:alice and not @session:bob"`
-  (or simply `npm run test:e2e`, where sessionless runs skip those scenarios):
+- `pnpm test:unit`: offline, always safe.
+- `pnpm exec cucumber-js --tags "not @session:alice and not @session:bob"`
+  (or simply `pnpm test:e2e`, where sessionless runs skip those scenarios):
   read-only against the host.
+- **Never use WebDAV in tests**, not even for setup or cleanup. It has its own
+  authentication and skips `authz.html`, triggers, schemas and uniqueness, so
+  it would hide exactly the bugs these tests look for.
+- **Run `access.feature` after every deploy.** A WebDAV save of `authz.html`
+  isn't validated, so the E2E run is the only check that the deployed rules
+  work.
 - **Signed-in scenarios write to the live host.** Before the first run against a
   production host, get the user's go-ahead, and prefer a staging host
   (`BASE_URL=...`). They create and delete only `zztest-` data.
@@ -127,10 +162,13 @@ Automated tests must not drive a real identity provider's login page. A person
 signs in once per **dedicated test account** and the session is saved:
 
 ```bash
-npx playwright open --save-storage=.auth/alice.json <BASE_URL>/auth/login
+pnpm session alice   # saves .auth/alice.json; BASE_URL=... to target staging
 ```
 
-Ask the user to run this (it opens a browser). `.auth/*.json` files are live
+Ask the user to run this, once per account. It opens a browser on
+`<BASE_URL>/auth/login` through `pnpm dlx playwright`, so Playwright isn't a
+project dependency. The script is named `session`, not `login`, because
+`pnpm login` is a built-in pnpm command. `.auth/*.json` files are live
 credentials, so never print, commit or upload them. When a signed-in step gets
 an unexpected 401, the world adds a hint saying the session has probably
 expired.

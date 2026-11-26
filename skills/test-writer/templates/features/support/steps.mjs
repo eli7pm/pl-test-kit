@@ -42,6 +42,24 @@ When(/^I (POST|PUT|PATCH) to "([^"]+)" (\d+) times at once with JSON:$/, async f
   this.last = this.responses.find((r) => r.status < 300) ?? this.responses[0];
 });
 
+// Selector ranges: `Range: selector=<css>`. The selector may contain double quotes,
+// e.g. I GET "/data/x.html" selecting "[itemprop="url"]".
+When(/^I (GET|HEAD|DELETE) "([^"]+)" selecting "(.+)"$/, async function (method, path, selector) {
+  this.last = await this.http(method, path, { selector });
+});
+
+// Any other Range value, e.g. "bytes=0-99". Pagelove may answer 200 to any Range.
+When(/^I (GET|HEAD) "([^"]+)" with range "(.+)"$/, async function (method, path, range) {
+  this.last = await this.http(method, path, { headers: { Range: this.interpolate(range) } });
+});
+
+// Cache-leak checks: later GETs use the bare URL, so the edge cache can answer them.
+Given("requests may hit the edge cache", function () { this.bustCache = false; });
+
+When(/^I (POST|PUT) to "([^"]+)" selecting "(.+)" with HTML:$/, async function (method, path, selector, html) {
+  this.last = await this.http(method, path, { selector, html });
+});
+
 When("I remember {string} as {string}", function (jsonPath, name) {
   const v = jsonPath.split(".").reduce((o, k) => o?.[k], this.last?.json);
   assert.notEqual(v, undefined, `No ${jsonPath} in last response: ${this.last?.text?.slice(0, 200)}`);

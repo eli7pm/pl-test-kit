@@ -21,5 +21,10 @@ Then ask Claude: "add tests to my Pagelove app".
 
 ## Requirements
 
-Node 20+. For signed-in E2E tests you also need Playwright (`npx playwright`), used
-once per test account to save a session.
+Node 24+ and [pnpm](https://pnpm.io). For signed-in E2E tests, `pnpm session <name>`
+saves a browser session once per test account; it fetches Playwright on demand
+through `pnpm dlx`.
+
+## License
+
+[MIT](LICENSE) © Eli Payano

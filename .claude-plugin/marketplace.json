@@ -1,11 +1,21 @@
 {
   "name": "pl-test-kit",
-  "owner": { "name": "Eli Payano" },
+  "description": "Test-generation tooling for Pagelove apps.",
+  "owner": {
+    "name": "Eli Payano",
+    "url": "https://github.com/eli7pm"
+  },
   "plugins": [
     {
       "name": "pl-test-kit",
       "source": "./",
-      "description": "Unit + Cucumber E2E test generation for Pagelove apps."
+      "description": "Unit + Cucumber E2E test generation for Pagelove apps.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Eli Payano",
+        "url": "https://github.com/eli7pm"
+      },
+      "license": "MIT"
     }
   ]
 }
