@@ -13,7 +13,7 @@ A Claude Code plugin that writes and runs tests for [Pagelove](https://pagelove.
 ## Install
 
 ```
-/plugin marketplace add ~/pl-test-kit
+/plugin marketplace add eli7pm/pl-test-kit
 /plugin install pl-test-kit@pl-test-kit
 ```
 
